@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FieldTrack Pro | Enterprise Employee Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0e27;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(-45deg, #0a0e27, #1a1f3a, #16213e, #0f122e);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            padding: 20px;
+        }
+        
+        .login-card {
+            background: rgba(26, 31, 58, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 32px;
+            padding: 48px;
+            width: 100%;
+            max-width: 440px;
+            border: 1px solid rgba(79, 109, 253, 0.3);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.6s ease;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .login-card h1 {
+            font-size: 42px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #4f6dfd 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 8px;
+        }
+        
+        .login-subtitle { color: #94a3b8; margin-bottom: 32px; font-size: 14px; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 14px; font-weight: 600; color: #cbd5e1; margin-bottom: 8px; }
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #1e243f;
+            border: 1px solid #2d3450;
+            border-radius: 16px;
+            font-size: 14px;
+            color: #e2e8f0;
+            transition: all 0.3s;
+        }
+        .input-group input:focus { outline: none; border-color: #4f6dfd; box-shadow: 0 0 0 3px rgba(79, 109, 253, 0.2); transform: scale(1.02); }
+        
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #4f6dfd 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 24px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px -5px rgba(79, 109, 253, 0.5);
+        }
+        
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .login-btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .register-link { text-align: center; margin-top: 24px; font-size: 13px; color: #94a3b8; }
+        .register-link a { color: #4f6dfd; text-decoration: none; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+        .register-link a:hover { text-shadow: 0 0 10px rgba(79,109,253,0.5); }
+        
+        .app-container { display: none; }
+        
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: linear-gradient(180deg, #0f122e 0%, #0a0e27 100%);
+            border-right: 1px solid #1e243f;
+            padding: 32px 20px;
+            overflow-y: auto;
+        }
+        
+        .logo {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 40px;
+            padding-left: 16px;
+            background: linear-gradient(135deg, #4f6dfd 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        .menu-item {
+            padding: 12px 16px;
+            margin: 4px 0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #94a3b8;
+            font-weight: 500;
+            font-size: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(135deg, #4f6dfd 0%, #7c3aed 100%);
+            transition: width 0.3s;
+            z-index: -1;
+            border-radius: 12px;
+        }
+        
+        .menu-item:hover::before {
+            width: 100%;
+        }
+        
+        .menu-item:hover { color: white; transform: translateX(5px); }
+        .menu-item.active {
+            background: linear-gradient(135deg, #4f6dfd 0%, #7c3aed 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(79, 109, 253, 0.3);
+        }
+        
+        .content-area { margin-left: 280px; padding: 32px 40px; min-height: 100vh; background: #0a0e27; }
+        .page { display: none; animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .page.active-page { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        
+        .card {
+            background: #0f122e;
+            border-radius: 24px;
+            padding: 28px;
+            margin-bottom: 24px;
+            border: 1px solid #1e243f;
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: #4f6dfd;
+            box-shadow: 0 10px 30px -10px rgba(79, 109, 253, 0.2);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #1e243f;
+        }
+        
+        .card-header h3 {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #4f6dfd 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .search-bar {
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            background: #1e243f;
+            border: 1px solid #2d3450;
+            border-radius: 16px;
+            font-size: 14px;
+            color: #e2e8f0;
+            width: 100%;
+            max-width: 300px;
+            transition: all 0.3s;
+        }
+        
+        .search-bar:focus { outline: none; border-color: #4f6dfd; transform: scale(1.02); }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 14px;
+            background: #1e243f;
+            border: 1px solid #2d3450;
+            border-radius: 12px;
+            font-size: 14px;
+            color: #e2e8f0;
+            transition: all 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #4f6dfd; transform: scale(1.02); }
+        
+        button {
+            background: linear-gradient(135deg, #4f6dfd 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.4s, height 0.4s;
+        }
+        
+        button:active::before {
+            width: 200px;
+            height: 200px;
+        }
+        
+        button:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 5px 20px rgba(79, 109, 253, 0.4); }
+        button.secondary { background: linear-gradient(135deg, #475569 0%, #334155 100%); }
+        button.danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        button.success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .employee-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        
+        .employee-card {
+            background: linear-gradient(135deg, #1e243f 0%, #161c35 100%);
+            border: 1px solid #2d3450;
+            border-radius: 16px;
+            padding: 16px;
+            transition: all 0.3s;
+        }
+        
+        .employee-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: #4f6dfd;
+            box-shadow: 0 10px 25px -5px rgba(79, 109, 253, 0.3);
+        }
+        
+        .employee-name { font-weight: 700; font-size: 16px; color: #e2e8f0; margin-bottom: 4px; }
+        .employee-id { font-size: 12px; color: #4f6dfd; font-weight: 600; margin-bottom: 8px; }
+        .employee-role { font-size: 13px; color: #94a3b8; margin-bottom: 12px; }
+        
+        .group-builder { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; min-height: 500px; }
+        .employee-pool, .group-pool {
+            background: #0f122e;
+            border-radius: 20px;
+            padding: 20px;
+            border: 2px dashed #2d3450;
+            transition: all 0.3s;
+        }
+        .employee-pool:hover, .group-pool:hover { border-color: #4f6dfd; }
+        
+        .drag-item {
+            background: linear-gradient(135deg, #1e243f 0%, #161c35 100%);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 12px;
+            cursor: grab;
+            border: 1px solid #2d3450;
+            transition: all 0.3s;
+        }
+        .drag-item:hover { border-color: #4f6dfd; transform: translateX(5px) scale(1.02); background: #2d3450; }
+        .drag-item:active { cursor: grabbing; }
+        
+        .group-card {
+            background: linear-gradient(135deg, #1e243f 0%, #161c35 100%);
+            border-radius: 16px;
+            padding: 16px;
+            margin: 12px 0;
+            border: 1px solid #2d3450;
+            transition: all 0.3s;
+        }
+        .group-card:hover { border-color: #4f6dfd; transform: translateX(5px); }
+        
+        .map-container { height: 500px; border-radius: 20px; overflow: hidden; border: 1px solid #2d3450; background: #1a1f3a; }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .badge:hover { transform: scale(1.05); }
+        .badge-complete { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+        .badge-progress { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }
+        .badge-pending { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 14px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .alert-success { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
+        .alert-error { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
+        
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        
+        .user-info {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            right: 24px;
+            padding: 16px;
+            background: linear-gradient(135deg, #1e243f 0%, #161c35 100%);
+            border-radius: 16px;
+            font-size: 13px;
+            border: 1px solid #2d3450;
+        }
+        
+        .logout-btn {
+            margin-top: 12px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            font-size: 12px;
+            padding: 8px;
+            width: 100%;
+        }
+        
+        .text-sm { font-size: 12px; color: #94a3b8; }
+        
+        .task-card {
+            background: linear-gradient(135deg, #1e243f 0%, #161c35 100%);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid #2d3450;
+            transition: all 0.3s;
+        }
+        .task-card:hover { transform: translateX(5px) scale(1.01); border-color: #4f6dfd; }
+        
+        .completed-task-card {
+            background: linear-gradient(135deg, #0f122e 0%, #0a0e27 100%);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid #10b981;
+            transition: all 0.3s;
+            opacity: 0.85;
+        }
+        .completed-task-card:hover { transform: translateX(5px); border-color: #4f6dfd; opacity: 1; }
+        
+        .dashboard-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .dashboard-btn {
+            padding: 8px 20px;
+            background: #1e243f;
+            border: 1px solid #2d3450;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .dashboard-btn.active {
+            background: linear-gradient(135deg, #4f6dfd 0%, #7c3aed 100%);
+            border-color: #4f6dfd;
+        }
+        .month-filter {
+            background: #1e243f;
+            border: 1px solid #2d3450;
+            border-radius: 12px;
+            padding: 8px 12px;
+            color: #e2e8f0;
+        }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid #1e243f; font-size: 14px; }
+        th { background: #0f122e; font-weight: 600; color: #cbd5e1; }
+        tr:hover { background: rgba(79, 109, 253, 0.1); transition: all 0.3s; }
+        
+        .custom-marker {
+            background: transparent;
+            border: none;
+        }
+        .marker-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #4f6dfd 0%, #7c3aed 100%);
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            color: white;
+            font-weight: bold;
+            font-size: 10px;
+            text-align: center;
+        }
+        .marker-content span:first-child {
+            font-size: 8px;
+            margin-top: 4px;
+        }
+        .marker-content span:last-child {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; height: auto; position: relative; padding: 20px; }
+            .content-area { margin-left: 0; padding: 20px; }
+            .group-builder { grid-template-columns: 1fr; }
+            .grid-2 { grid-template-columns: 1fr; }
+            .user-info { position: static; margin-top: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="authContainer" class="login-container">
+    <div class="login-card">
+        <h1>FieldTrack Pro</h1>
+        <div class="login-subtitle">Enterprise Employee Management System</div>
+        
+        <div id="loginForm">
+            <div class="input-group">
+                <label>Email / Username</label>
+                <input type="text" id="loginEmail" placeholder="Enter your email">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="Enter password">
+            </div>
+            <button class="login-btn" onclick="handleLogin()">Sign In</button>
+            <div class="register-link">
+                Don't have an account? <a onclick="showRegister()">Create Account</a>
+            </div>
+        </div>
+        
+        <div id="registerForm" style="display: none;">
+            <div class="input-group">
+                <label>Full Name</label>
+                <input type="text" id="regFullName" placeholder="John Doe">
+            </div>
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" id="regEmail" placeholder="email@example.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="regPassword" placeholder="Create password">
+            </div>
+            <div class="input-group">
+                <label>Confirm Password</label>
+                <input type="password" id="regConfirmPassword" placeholder="Confirm password">
+            </div>
+            <button class="login-btn" onclick="handleRegister()">Create Account</button>
+            <div class="register-link">
+                Already have an account? <a onclick="showLogin()">Sign In</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="mainApp" class="app-container">
+    <div class="sidebar">
+        <div class="logo">Field<span style="color:#4f6dfd">Track Pro</span></div>
+        <div id="menuItems">
+            <div class="menu-item" data-page="employees">Employees</div>
+            <div class="menu-item" data-page="groups">Form Groups</div>
+            <div class="menu-item" data-page="tasks">Assign Tasks</div>
+            <div class="menu-item" data-page="completeTasks">Complete Tasks</div>
+            <div class="menu-item" data-page="dashboard">Dashboard</div>
+            <div class="menu-item" data-page="users">User Management</div>
+            <div class="menu-item" data-page="database">Database Admin</div>
+        </div>
+        <div class="user-info">
+            <div id="userName" style="font-weight: 700;"></div>
+            <div id="userRole" style="font-size: 11px; margin-top: 4px;"></div>
+            <button class="logout-btn" onclick="handleLogout()">Sign Out</button>
+        </div>
+    </div>
+    <div class="content-area">
+        <div id="alertContainer"></div>
+
+        <div id="employees" class="page">
+            <div class="card">
+                <div class="card-header"><h3>Add New Employee</h3></div>
+                <div class="grid-2">
+                    <div>
+                        <div class="form-group"><label>Full Name</label><input type="text" id="empName" placeholder="John Doe"></div>
+                        <div class="form-group"><label>Employee ID</label><input type="text" id="empId" placeholder="EMP001"></div>
+                        <div class="form-group"><label>Role</label><input type="text" id="empRole" placeholder="Field Technician"></div>
+                        <button onclick="addEmployee()">Add Employee</button>
+                    </div>
+                    <div>
+                        <div class="form-group"><label>Bulk Import (Excel/CSV)</label><input type="file" id="excelUpload" accept=".xlsx,.xls,.csv"></div>
+                        <button onclick="importExcel()">Upload & Import</button>
+                        <div class="text-sm">Format: Name, ID, Role</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3>Employee Directory</h3><input type="text" id="employeeSearch" class="search-bar" placeholder="Search..."></div>
+                <div id="employeeDirectory"></div>
+            </div>
+        </div>
+
+        <div id="groups" class="page">
+            <div class="card">
+                <div class="card-header"><h3>Drag & Drop Group Builder</h3><div><input type="text" id="newGroupName" placeholder="Group Name"><button onclick="createGroup()" style="margin-left: 10px;">Create Group</button></div></div>
+                <div class="group-builder">
+                    <div class="employee-pool">
+                        <h4>Available Employees</h4>
+                        <input type="text" id="availableEmployeesSearch" class="search-bar" placeholder="Search employees..." style="margin-bottom: 15px;">
+                        <div id="availableEmployees"></div>
+                    </div>
+                    <div class="group-pool">
+                        <h4>Employee Groups</h4>
+                        <input type="text" id="groupsSearch" class="search-bar" placeholder="Search groups..." style="margin-bottom: 15px;">
+                        <div id="groupsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tasks" class="page">
+            <div class="card">
+                <div class="card-header"><h3>Assign New Task</h3></div>
+                <div class="grid-2">
+                    <div>
+                        <div class="form-group"><label>Assign To</label><select id="taskType"><option value="employee">Individual</option><option value="group">Group</option></select></div>
+                        <div id="employeeSelectGroup"><div class="form-group"><label>Select Employee</label><select id="taskEmployee"></select></div></div>
+                        <div id="groupSelectGroup" style="display:none;"><div class="form-group"><label>Select Group</label><select id="taskGroup"></select></div></div>
+                        <div class="form-group"><label>Job Title</label><input type="text" id="jobTitle" placeholder="Site Inspection"></div>
+                        <div class="form-group"><label>Location Type</label><select id="locationType">
+                            <option value="point">Single Point (Lat, Lng)</option>
+                            <option value="range">Coordinate Range (Road/Area)</option>
+                        </select></div>
+                        <div id="pointLocation">
+                            <div class="form-group"><label>Coordinates (Latitude, Longitude)</label><input type="text" id="jobLocation" placeholder="e.g., 10.6918, -61.2225"></div>
+                        </div>
+                        <div id="rangeLocation" style="display:none;">
+                            <div class="form-group"><label>Start Point</label><input type="text" id="startLatLng" placeholder="10.6667, -61.5167"></div>
+                            <div class="form-group"><label>End Point</label><input type="text" id="endLatLng" placeholder="10.6833, -61.5000"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group"><label>Start Date</label><input type="date" id="taskStartDate"></div>
+                        <div class="form-group"><label>End Date</label><input type="date" id="taskEndDate"></div>
+                        <div class="form-group"><label>Status</label><select id="taskStatus"><option value="pending">Pending</option><option value="progress">In Progress</option></select></div>
+                        <div class="form-group"><label>Notes</label><textarea id="taskNotes" rows="2"></textarea></div>
+                        <button onclick="assignTask()">Assign Task</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3>Active Tasks</h3><input type="text" id="taskSearch" class="search-bar" placeholder="Search..."></div>
+                <div id="tasksContainer"></div>
+            </div>
+        </div>
+
+        <div id="completeTasks" class="page">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Completed Jobs</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="month" id="monthFilter" class="month-filter" onchange="displayCompletedTasks()">
+                        <button onclick="clearMonthFilter()" class="secondary">Clear Filter</button>
+                    </div>
+                </div>
+                <input type="text" id="completedSearch" class="search-bar" placeholder="Search completed tasks..." style="width: 100%; max-width: 100%; margin-bottom: 20px;">
+                <div id="completedTasksContainer"></div>
+            </div>
+        </div>
+
+        <div id="dashboard" class="page">
+            <div class="card">
+                <div class="card-header"><h3>Live Dashboard</h3></div>
+                <div class="dashboard-controls">
+                    <button class="dashboard-btn active" onclick="setDashboardView('active')">Active Jobs</button>
+                    <button class="dashboard-btn" onclick="setDashboardView('completed')">Completed Jobs</button>
+                    <button class="dashboard-btn" onclick="setDashboardView('all')">All Jobs</button>
+                </div>
+                <div id="dashboardMap" class="map-container"></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3>Job Progress</h3></div>
+                <div id="jobProgressList"></div>
+            </div>
+        </div>
+
+        <div id="users" class="page">
+            <div class="card">
+                <div class="card-header"><h3>User Management</h3></div>
+                <div class="grid-2">
+                    <div>
+                        <div class="form-group"><label>Full Name</label><input type="text" id="newUserFullName"></div>
+                        <div class="form-group"><label>Email</label><input type="email" id="newUserEmail"></div>
+                        <div class="form-group"><label>Password</label><input type="password" id="newUserPassword"></div>
+                        <div class="form-group"><label>Role</label><select id="newUserRole"><option value="general">General</option><option value="admin">Admin</option><option value="dbadmin">DB Admin</option></select></div>
+                        <button onclick="createUserByAdmin()">Create User</button>
+                    </div>
+                    <div>
+                        <div class="form-group"><label>Reset Password</label><input type="text" id="resetUserEmail" placeholder="User email"><input type="password" id="resetUserNewPass" placeholder="New password" style="margin-top: 8px;"><button onclick="adminResetPassword()" style="margin-top: 8px;">Reset Password</button></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3>System Users</h3></div>
+                <div id="usersTable"></div>
+            </div>
+        </div>
+
+        <div id="database" class="page">
+            <div class="card">
+                <div class="card-header"><h3>Database Administration</h3></div>
+                <div id="dbLoginSection">
+                    <div class="form-group"><label>DB Admin Password</label><input type="password" id="dbAdminPass" placeholder="Enter password"></div>
+                    <button onclick="loginToDatabase()">Access Database</button>
+                </div>
+                <div id="dbContent" style="display: none;">
+                    <div><button onclick="exportDatabase()">Export Database</button></div>
+                    <hr style="margin: 16px 0; border-color: #1e243f;">
+                    <div id="dbTables"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let db = null;
+    let currentUser = null;
+    let dashboardMap = null;
+    let currentDashboardView = 'active';
+    
+    function encodeBase64(str) {
+        return btoa(unescape(encodeURIComponent(str)));
+    }
+    
+    function decodeBase64(str) {
+        return decodeURIComponent(escape(atob(str)));
+    }
+    
+    function confirmAction(message, callback) {
+        if (confirm(message)) {
+            callback();
+        }
+    }
+    
+    // No test data - start with empty users array
+    let users = [];
+    
+    function saveUsersToLocal() {
+        localStorage.setItem('fieldtrack_users', JSON.stringify(users));
+    }
+    
+    function loadUsersFromLocal() {
+        const stored = localStorage.getItem('fieldtrack_users');
+        if (stored) {
+            users = JSON.parse(stored);
+        } else {
+            users = [];
+            saveUsersToLocal();
+        }
+    }
+    
+    function getUsers() {
+        return users;
+    }
+    
+    function saveUsers(userArray) {
+        users = userArray;
+        saveUsersToLocal();
+    }
+    
+    function getCurrentSession() {
+        const session = localStorage.getItem('fieldtrack_session');
+        return session ? JSON.parse(session) : null;
+    }
+    
+    function setSession(user) {
+        localStorage.setItem('fieldtrack_session', JSON.stringify(user));
+        currentUser = user;
+    }
+    
+    function clearSession() {
+        localStorage.removeItem('fieldtrack_session');
+        currentUser = null;
+    }
+    
+    async function initDatabase() {
+        const SQL = await initSqlJs({ locateFile: () => 'https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.wasm' });
+        let data = localStorage.getItem('fieldtrack_db');
+        if (data) {
+            const bytes = new Uint8Array(data.split(',').map(Number));
+            db = new SQL.Database(bytes);
+        } else {
+            db = new SQL.Database();
+        }
+        
+        db.run(`CREATE TABLE IF NOT EXISTS employees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            emp_id TEXT UNIQUE, 
+            name TEXT, 
+            role TEXT, 
+            lat REAL, 
+            lng REAL,
+            created_date DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+        
+        db.run(`CREATE TABLE IF NOT EXISTS groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            name TEXT, 
+            employee_ids TEXT,
+            created_date DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+        
+        db.run(`CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            employee_id INTEGER, 
+            group_id INTEGER, 
+            job_title TEXT, 
+            location TEXT, 
+            location_type TEXT, 
+            start_lat REAL, 
+            start_lng REAL, 
+            end_lat REAL, 
+            end_lng REAL, 
+            lat REAL, 
+            lng REAL, 
+            status TEXT, 
+            notes TEXT, 
+            start_date TEXT, 
+            end_date TEXT, 
+            assigned_date DATETIME DEFAULT CURRENT_TIMESTAMP, 
+            completed_date DATETIME
+        )`);
+        
+        try {
+            const tableInfo = db.exec("PRAGMA table_info(tasks)");
+            if (tableInfo.length > 0) {
+                const columns = tableInfo[0].values.map(col => col[1]);
+                if (!columns.includes('completed_date')) {
+                    db.run("ALTER TABLE tasks ADD COLUMN completed_date DATETIME");
+                }
+            }
+        } catch(e) {}
+        
+        saveDatabase();
+    }
+    
+    function saveDatabase() {
+        const data = db.export();
+        const bytes = Array.from(data);
+        localStorage.setItem('fieldtrack_db', bytes.join(','));
+    }
+    
+    function showAlert(message, type) {
+        const container = document.getElementById('alertContainer');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.textContent = message;
+        container.appendChild(alert);
+        alert.style.display = 'block';
+        setTimeout(() => alert.remove(), 4000);
+    }
+    
+    function loadEmployees() {
+        const result = db.exec("SELECT * FROM employees");
+        return result.length > 0 ? result[0].values : [];
+    }
+    
+    function loadGroups() {
+        const result = db.exec("SELECT * FROM groups");
+        return result.length > 0 ? result[0].values : [];
+    }
+    
+    function loadTasks() {
+        const result = db.exec("SELECT * FROM tasks ORDER BY assigned_date DESC");
+        return result.length > 0 ? result[0].values : [];
+    }
+    
+    function refreshAllSections() {
+        displayEmployeeDirectory();
+        updateAvailableEmployeesList();
+        loadGroupsList();
+        displayTasksCards();
+        displayCompletedTasks();
+        if (document.getElementById('dashboard').classList.contains('active-page')) {
+            initDashboardMap();
+        }
+    }
+    
+    function displayEmployeeDirectory() {
+        const employees = loadEmployees();
+        const searchTerm = document.getElementById('employeeSearch')?.value.toLowerCase() || '';
+        const filtered = employees.filter(emp => emp[2].toLowerCase().includes(searchTerm) || emp[1].toLowerCase().includes(searchTerm));
+        let html = '<div class="employee-grid">';
+        filtered.forEach(emp => {
+            html += `<div class="employee-card">
+                <div class="employee-name">${escapeHtml(emp[2])}</div>
+                <div class="employee-id">ID: ${escapeHtml(emp[1])}</div>
+                <div class="employee-role">${escapeHtml(emp[3] || 'No role')}</div>
+                <button onclick="confirmAction('Are you sure you want to delete this employee?', () => deleteEmployee(${emp[0]}))" class="danger">Delete</button>
+            </div>`;
+        });
+        html += '</div>';
+        if (filtered.length === 0) html = '<div class="loading">No employees found</div>';
+        document.getElementById('employeeDirectory').innerHTML = html;
+        
+        let options = '<option value="">Select Employee</option>';
+        employees.forEach(emp => { options += `<option value="${emp[0]}">${escapeHtml(emp[2])} (${escapeHtml(emp[1])})</option>`; });
+        document.getElementById('taskEmployee').innerHTML = options;
+        
+        const groups = loadGroups();
+        let groupOptions = '<option value="">Select Group</option>';
+        groups.forEach(group => { groupOptions += `<option value="${group[0]}">${escapeHtml(group[1])}</option>`; });
+        document.getElementById('taskGroup').innerHTML = groupOptions;
+    }
+    
+    function updateAvailableEmployeesList() {
+        const employees = loadEmployees();
+        const searchTerm = document.getElementById('availableEmployeesSearch')?.value.toLowerCase() || '';
+        const filtered = employees.filter(emp => emp[2].toLowerCase().includes(searchTerm) || emp[1].toLowerCase().includes(searchTerm));
+        
+        const availDiv = document.getElementById('availableEmployees');
+        if (availDiv && document.getElementById('groups').classList.contains('active-page')) {
+            availDiv.innerHTML = '';
+            filtered.forEach(emp => {
+                const div = document.createElement('div');
+                div.className = 'drag-item';
+                div.setAttribute('data-id', emp[0]);
+                div.textContent = `${emp[2]} (${emp[1]}) - ${emp[3] || 'No role'}`;
+                availDiv.appendChild(div);
+            });
+            new Sortable(availDiv, { group: { name: 'employees', pull: 'clone', revertClone: false }, sort: true });
+        }
+    }
+    
+    function loadGroupsList() {
+        const groups = loadGroups();
+        const employees = loadEmployees();
+        const searchTerm = document.getElementById('groupsSearch')?.value.toLowerCase() || '';
+        const filtered = groups.filter(group => group[1].toLowerCase().includes(searchTerm));
+        
+        const groupsDiv = document.getElementById('groupsList');
+        if (!groupsDiv) return;
+        groupsDiv.innerHTML = '';
+        filtered.forEach(group => {
+            const groupCard = document.createElement('div');
+            groupCard.className = 'group-card';
+            groupCard.innerHTML = `<div class="group-card-header"><strong>${escapeHtml(group[1])}</strong></div><div class="group-members" data-group-id="${group[0]}"></div><button onclick="confirmAction('Are you sure you want to delete this group?', () => deleteGroup(${group[0]}))" class="danger">Delete Group</button>`;
+            groupsDiv.appendChild(groupCard);
+            const membersDiv = groupCard.querySelector('.group-members');
+            const empIds = group[2] ? group[2].split(',').map(id => parseInt(id)) : [];
+            empIds.forEach(empId => {
+                const emp = employees.find(e => e[0] === empId);
+                if (emp) {
+                    const empDiv = document.createElement('div');
+                    empDiv.className = 'drag-item';
+                    empDiv.setAttribute('data-id', emp[0]);
+                    empDiv.textContent = `${emp[2]} (${emp[1]})`;
+                    membersDiv.appendChild(empDiv);
+                }
+            });
+            new Sortable(membersDiv, {
+                group: { name: 'employees', pull: true, revertClone: false },
+                sort: true,
+                onEnd: () => {
+                    const memberIds = Array.from(membersDiv.children).map(child => parseInt(child.getAttribute('data-id')));
+                    db.run("UPDATE groups SET employee_ids = ? WHERE id = ?", [memberIds.join(','), group[0]]);
+                    saveDatabase();
+                }
+            });
+        });
+    }
+    
+    function addEmployee() {
+        const name = document.getElementById('empName').value;
+        const empId = document.getElementById('empId').value;
+        const role = document.getElementById('empRole').value;
+        if (!name || !empId) { showAlert('Fill all fields', 'error'); return; }
+        try {
+            db.run("INSERT INTO employees (emp_id, name, role, created_date) VALUES (?, ?, ?, datetime('now'))", [empId, name, role]);
+            saveDatabase();
+            showAlert('Employee added', 'success');
+            document.getElementById('empName').value = '';
+            document.getElementById('empId').value = '';
+            document.getElementById('empRole').value = '';
+            refreshAllSections();
+        } catch(e) { showAlert('ID already exists', 'error'); }
+    }
+    
+    function deleteEmployee(id) {
+        db.run("DELETE FROM employees WHERE id = ?", [id]);
+        saveDatabase();
+        refreshAllSections();
+        showAlert('Employee deleted', 'success');
+    }
+    
+    function createGroup() {
+        const groupName = document.getElementById('newGroupName').value;
+        if (!groupName) { showAlert('Enter group name', 'error'); return; }
+        db.run("INSERT INTO groups (name, employee_ids, created_date) VALUES (?, ?, datetime('now'))", [groupName, '']);
+        saveDatabase();
+        document.getElementById('newGroupName').value = '';
+        refreshAllSections();
+        showAlert('Group created', 'success');
+    }
+    
+    function deleteGroup(id) {
+        db.run("DELETE FROM groups WHERE id = ?", [id]);
+        saveDatabase();
+        refreshAllSections();
+        showAlert('Group deleted', 'success');
+    }
+    
+    function assignTask() {
+        const taskType = document.getElementById('taskType').value;
+        const jobTitle = document.getElementById('jobTitle').value;
+        const status = document.getElementById('taskStatus').value;
+        const notes = document.getElementById('taskNotes').value;
+        const startDate = document.getElementById('taskStartDate').value;
+        const endDate = document.getElementById('taskEndDate').value;
+        const locationType = document.getElementById('locationType').value;
+        
+        if (!jobTitle) { showAlert('Enter job title', 'error'); return; }
+        
+        let locationStr = '';
+        let lat = null, lng = null, startLat = null, startLng = null, endLat = null, endLng = null;
+        
+        if (locationType === 'point') {
+            const locationStrValue = document.getElementById('jobLocation').value;
+            if (locationStrValue) {
+                const coords = locationStrValue.split(',');
+                if (coords.length === 2) { 
+                    lat = parseFloat(coords[0]); 
+                    lng = parseFloat(coords[1]);
+                    locationStr = locationStrValue;
+                }
+            }
+        } else {
+            const startStr = document.getElementById('startLatLng').value;
+            const endStr = document.getElementById('endLatLng').value;
+            if (startStr && endStr) {
+                const startCoords = startStr.split(',');
+                const endCoords = endStr.split(',');
+                if (startCoords.length === 2 && endCoords.length === 2) {
+                    startLat = parseFloat(startCoords[0]);
+                    startLng = parseFloat(startCoords[1]);
+                    endLat = parseFloat(endCoords[0]);
+                    endLng = parseFloat(endCoords[1]);
+                    locationStr = `Range: ${startStr} to ${endStr}`;
+                }
+            }
+        }
+        
+        if (taskType === 'employee') {
+            const employeeId = document.getElementById('taskEmployee').value;
+            if (!employeeId) { showAlert('Select employee', 'error'); return; }
+            db.run(`INSERT INTO tasks (employee_id, job_title, location, location_type, lat, lng, start_lat, start_lng, end_lat, end_lng, status, notes, start_date, end_date, assigned_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`, 
+                [parseInt(employeeId), jobTitle, locationStr, locationType, lat, lng, startLat, startLng, endLat, endLng, status, notes, startDate, endDate]);
+            if (lat && lng) db.run("UPDATE employees SET lat = ?, lng = ? WHERE id = ?", [lat, lng, parseInt(employeeId)]);
+        } else {
+            const groupId = document.getElementById('taskGroup').value;
+            if (!groupId) { showAlert('Select group', 'error'); return; }
+            db.run(`INSERT INTO tasks (group_id, job_title, location, location_type, lat, lng, start_lat, start_lng, end_lat, end_lng, status, notes, start_date, end_date, assigned_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`, 
+                [parseInt(groupId), jobTitle, locationStr, locationType, lat, lng, startLat, startLng, endLat, endLng, status, notes, startDate, endDate]);
+        }
+        saveDatabase();
+        showAlert('Task assigned', 'success');
+        document.getElementById('jobTitle').value = '';
+        document.getElementById('jobLocation').value = '';
+        document.getElementById('startLatLng').value = '';
+        document.getElementById('endLatLng').value = '';
+        document.getElementById('taskNotes').value = '';
+        document.getElementById('taskStartDate').value = '';
+        document.getElementById('taskEndDate').value = '';
+        refreshAllSections();
+    }
+    
+    function updateTaskStatus(taskId, newStatus) {
+        try {
+            if (newStatus === 'complete') {
+                const completedDate = new Date().toISOString();
+                db.run("UPDATE tasks SET status = ?, completed_date = ? WHERE id = ?", [newStatus, completedDate, taskId]);
+                showAlert('Task marked complete! Updated across all sections.', 'success');
+            } else {
+                db.run("UPDATE tasks SET status = ? WHERE id = ?", [newStatus, taskId]);
+                showAlert('Task status updated to ' + newStatus, 'success');
+            }
+            saveDatabase();
+            refreshAllSections();
+        } catch(e) {
+            showAlert('Error updating task status: ' + e.message, 'error');
+        }
+    }
+    
+    function displayTasksCards() {
+        const tasks = loadTasks();
+        const employees = loadEmployees();
+        const searchTerm = document.getElementById('taskSearch')?.value.toLowerCase() || '';
+        const employeesMap = new Map(employees.map(e => [e[0], e]));
+        
+        const activeTasks = tasks.filter(task => task[12] !== 'complete');
+        const filtered = activeTasks.filter(task => task[3].toLowerCase().includes(searchTerm));
+        
+        let html = '';
+        if (filtered.length === 0) {
+            html = '<div class="loading">No active tasks found</div>';
+        } else {
+            filtered.forEach(task => {
+                const employee = employeesMap.get(task[1]);
+                const statusClass = task[12] === 'progress' ? 'badge-progress' : 'badge-pending';
+                const statusText = task[12] === 'progress' ? 'In Progress' : 'Pending';
+                html += `<div class="task-card" id="task-${task[0]}">
+                    <div class="flex-between">
+                        <div>
+                            <strong>${escapeHtml(task[3])}</strong><br>
+                            <span class="text-sm">To: ${employee ? escapeHtml(employee[2]) : 'Unknown'}</span><br>
+                            <span class="text-sm">Location: ${task[4] || '-'}</span>
+                            ${task[14] ? `<br><span class="text-sm">Start: ${task[14]}</span>` : ''}
+                            ${task[15] ? `<span class="text-sm"> | End: ${task[15]}</span>` : ''}
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="badge ${statusClass}">${statusText}</span><br>
+                            <div style="margin-top: 8px;">
+                                <select id="status-select-${task[0]}" style="margin-bottom: 8px; padding: 6px;">
+                                    <option value="pending" ${task[12] === 'pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="progress" ${task[12] === 'progress' ? 'selected' : ''}>In Progress</option>
+                                    <option value="complete">Complete</option>
+                                </select>
+                                <br>
+                                <button class="success" onclick="updateTaskStatus(${task[0]}, document.getElementById('status-select-${task[0]}').value)">Update Status</button>
+                                <button class="success" style="margin-left: 8px;" onclick="updateTaskStatus(${task[0]}, 'complete')">Mark Complete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+        document.getElementById('tasksContainer').innerHTML = html;
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    function displayCompletedTasks() {
+        const tasks = loadTasks();
+        const employees = loadEmployees();
+        const searchTerm = document.getElementById('completedSearch')?.value.toLowerCase() || '';
+        const monthFilter = document.getElementById('monthFilter')?.value;
+        const employeesMap = new Map(employees.map(e => [e[0], e]));
+        
+        let completedTasks = tasks.filter(task => task[12] === 'complete');
+        
+        if (monthFilter) {
+            completedTasks = completedTasks.filter(task => {
+                if (task[17]) {
+                    const completedDate = new Date(task[17]);
+                    const filterDate = new Date(monthFilter);
+                    return completedDate.getMonth() === filterDate.getMonth() && 
+                           completedDate.getFullYear() === filterDate.getFullYear();
+                }
+                return false;
+            });
+        }
+        
+        const filtered = completedTasks.filter(task => task[3].toLowerCase().includes(searchTerm));
+        let html = '';
+        if (filtered.length === 0) {
+            html = '<div class="loading">No completed tasks found</div>';
+        } else {
+            filtered.forEach(task => {
+                const employee = employeesMap.get(task[1]);
+                html += `<div class="completed-task-card">
+                    <div class="flex-between">
+                        <div>
+                            <strong>${escapeHtml(task[3])}</strong><br>
+                            <span class="text-sm">Assigned to: ${employee ? escapeHtml(employee[2]) : 'Unknown'}</span><br>
+                            <span class="text-sm">Location: ${task[4] || '-'}</span>
+                            ${task[14] ? `<br><span class="text-sm">Start: ${task[14]}</span>` : ''}
+                            ${task[15] ? `<span class="text-sm"> | End: ${task[15]}</span>` : ''}
+                            <br><span class="text-sm">Completed: ${task[17] ? new Date(task[17]).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                        <div>
+                            <span class="badge badge-complete">Complete</span>
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+        document.getElementById('completedTasksContainer').innerHTML = html;
+    }
+    
+    function setDashboardView(view) {
+        currentDashboardView = view;
+        const btns = document.querySelectorAll('.dashboard-btn');
+        btns.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.innerText.toLowerCase().includes(view)) {
+                btn.classList.add('active');
+            }
+        });
+        initDashboardMap();
+    }
+    
+    function clearMonthFilter() {
+        document.getElementById('monthFilter').value = '';
+        displayCompletedTasks();
+    }
+    
+    function initDashboardMap() {
+        if (dashboardMap) dashboardMap.remove();
+        dashboardMap = L.map('dashboardMap').setView([10.6918, -61.2225], 9);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap', maxZoom: 18 }).addTo(dashboardMap);
+        
+        const employees = loadEmployees();
+        let tasks = loadTasks();
+        
+        if (currentDashboardView === 'active') {
+            tasks = tasks.filter(t => t[12] !== 'complete');
+        } else if (currentDashboardView === 'completed') {
+            tasks = tasks.filter(t => t[12] === 'complete');
+        }
+        
+        employees.forEach(emp => {
+            if (emp[4] && emp[5]) {
+                const empTasks = tasks.filter(t => t[1] === emp[0]);
+                let markerColor = '#4f6dfd';
+                if (empTasks.length > 0) {
+                    const taskStatus = empTasks[0][12];
+                    if (taskStatus === 'progress') markerColor = '#3b82f6';
+                    if (taskStatus === 'pending') markerColor = '#f59e0b';
+                    if (taskStatus === 'complete') markerColor = '#10b981';
+                }
+                
+                const customIcon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div class="marker-content" style="background: linear-gradient(135deg, ${markerColor} 0%, ${markerColor}cc 100%);">
+                                <span>${emp[2].charAt(0)}</span>
+                                <span>${empTasks.length}</span>
+                           </div>`,
+                    iconSize: [40, 40],
+                    popupAnchor: [0, -20]
+                });
+                
+                L.marker([emp[4], emp[5]], { icon: customIcon }).addTo(dashboardMap)
+                    .bindPopup(`<strong>${escapeHtml(emp[2])}</strong><br>Role: ${emp[3] || 'N/A'}<br>ID: ${emp[1]}`);
+            }
+        });
+        
+        tasks.forEach(task => {
+            if (task[5] === 'range' && task[8] && task[9] && task[10] && task[11]) {
+                let lineColor = '#4f6dfd';
+                if (task[12] === 'progress') lineColor = '#3b82f6';
+                if (task[12] === 'pending') lineColor = '#f59e0b';
+                if (task[12] === 'complete') lineColor = '#10b981';
+                
+                L.polyline([[task[8], task[9]], [task[10], task[11]]], { color: lineColor, weight: 3 }).addTo(dashboardMap)
+                    .bindPopup(`<strong>${escapeHtml(task[3])}</strong><br>Status: ${task[12]}`);
+            } else if (task[10] && task[11]) {
+                let markerColor = '#4f6dfd';
+                if (task[12] === 'progress') markerColor = '#3b82f6';
+                if (task[12] === 'pending') markerColor = '#f59e0b';
+                if (task[12] === 'complete') markerColor = '#10b981';
+                
+                const customIcon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="width:30px;height:30px;background:${markerColor};border-radius:50%;border:2px solid white;"></div>`,
+                    iconSize: [30, 30]
+                });
+                
+                L.marker([task[10], task[11]], { icon: customIcon }).addTo(dashboardMap)
+                    .bindPopup(`<strong>${escapeHtml(task[3])}</strong><br>Status: ${task[12]}`);
+            }
+        });
+        
+        const progressDiv = document.getElementById('jobProgressList');
+        let html = '';
+        const activeTasks = tasks.filter(t => t[12] !== 'complete');
+        if (activeTasks.length === 0) {
+            html = '<div class="loading">No active tasks</div>';
+        } else {
+            activeTasks.forEach(task => {
+                const emp = employees.find(e => e[0] === task[1]);
+                const statusClass = task[12] === 'progress' ? 'badge-progress' : 'badge-pending';
+                html += `<div class="flex-between" style="padding: 16px; border-bottom: 1px solid #1e243f;">
+                    <div><strong>${escapeHtml(task[3])}</strong><br><span class="text-sm">${emp ? emp[2] : 'Unknown'}</span></div>
+                    <div><span class="badge ${statusClass}">${task[12]}</span><button class="success" onclick="updateTaskStatus(${task[0]}, 'complete')" style="margin-left: 12px;">Complete</button></div>
+                </div>`;
+            });
+        }
+        progressDiv.innerHTML = html;
+    }
+    
+    function importExcel() {
+        const file = document.getElementById('excelUpload').files[0];
+        if (!file) { showAlert('Select file', 'error'); return; }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            let count = 0;
+            rows.forEach(row => {
+                const name = row.Name || row.name;
+                const empId = row.ID || row.id;
+                const role = row.Role || row.role;
+                if (name && empId) {
+                    try { db.run("INSERT INTO employees (emp_id, name, role, created_date) VALUES (?, ?, ?, datetime('now'))", [empId, name, role || '']); count++; } catch(e) {}
+                }
+            });
+            saveDatabase();
+            showAlert(`Imported ${count} employees`, 'success');
+            refreshAllSections();
+        };
+        reader.readAsArrayBuffer(file);
+    }
+    
+    function exportDatabase() {
+        const data = db.export();
+        const blob = new Blob([data], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `fieldtrack_backup_${new Date().toISOString().slice(0,19)}.db`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    
+    function loginToDatabase() {
+        if (document.getElementById('dbAdminPass').value === 'db123' && (currentUser?.role === 'dbadmin' || currentUser?.role === 'admin')) {
+            document.getElementById('dbLoginSection').style.display = 'none';
+            document.getElementById('dbContent').style.display = 'block';
+            const tables = ['employees', 'groups', 'tasks'];
+            let html = '';
+            tables.forEach(table => {
+                const result = db.exec(`SELECT * FROM ${table}`);
+                if (result.length > 0) {
+                    html += `<h4>${table}</h4><table border="1" style="width:100%;border-collapse:collapse;"><thead><tr>${result[0].columns.map(c => `<th style="padding:8px;background:#1e243f;">${c}</th>`).join('')}</tr></thead><tbody>${result[0].values.map(row => `<tr>${row.map(cell => `<td style="padding:8px;">${cell !== null ? cell : '-'}</td>`).join('')}</tr>`).join('')}</tbody></table><br>`;
+                }
+            });
+            document.getElementById('dbTables').innerHTML = html;
+        } else { showAlert('Invalid or unauthorized', 'error'); }
+    }
+    
+    function displayUsersTable() {
+        const userList = getUsers();
+        let html = '<thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead><tbody>';
+        userList.forEach(user => {
+            if (user.email !== currentUser?.email) {
+                html += `<tr>
+                    <td>${escapeHtml(user.fullName)}</td>
+                    <td>${escapeHtml(user.email)}</td>
+                    <td><select onchange="updateUserRole('${user.email}', this.value)"><option value="general" ${user.role === 'general' ? 'selected' : ''}>General</option><option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option><option value="dbadmin" ${user.role === 'dbadmin' ? 'selected' : ''}>DB Admin</option></select></td>
+                    <td><button onclick="confirmAction('Are you sure you want to delete this user?', () => deleteUser('${user.email}'))" class="danger">Delete</button></td>
+                </tr>`;
+            } else {
+                html += `<tr>
+                    <td>${escapeHtml(user.fullName)} (You)</td>
+                    <td>${escapeHtml(user.email)}</td>
+                    <td>${user.role}</td>
+                    <td>-</td>
+                </tr>`;
+            }
+        });
+        html += '</tbody>';
+        document.getElementById('usersTable').innerHTML = html;
+    }
+    
+    function updateUserRole(email, newRole) {
+        const userList = getUsers();
+        const userIndex = userList.findIndex(u => u.email === email);
+        if (userIndex !== -1) { 
+            userList[userIndex].role = newRole; 
+            saveUsers(userList); 
+            showAlert('Role updated', 'success'); 
+            displayUsersTable(); 
+        }
+    }
+    
+    function deleteUser(email) {
+        let userList = getUsers();
+        userList = userList.filter(u => u.email !== email);
+        saveUsers(userList);
+        showAlert('User deleted', 'success');
+        displayUsersTable();
+    }
+    
+    function createUserByAdmin() {
+        const fullName = document.getElementById('newUserFullName').value;
+        const email = document.getElementById('newUserEmail').value;
+        const password = document.getElementById('newUserPassword').value;
+        const role = document.getElementById('newUserRole').value;
+        if (!fullName || !email || !password) { showAlert('Fill all fields', 'error'); return; }
+        const userList = getUsers();
+        if (userList.find(u => u.email === email)) { showAlert('Email exists', 'error'); return; }
+        userList.push({ fullName, email, password: encodeBase64(password), role });
+        saveUsers(userList);
+        showAlert('User created', 'success');
+        document.getElementById('newUserFullName').value = '';
+        document.getElementById('newUserEmail').value = '';
+        document.getElementById('newUserPassword').value = '';
+        displayUsersTable();
+    }
+    
+    function adminResetPassword() {
+        const email = document.getElementById('resetUserEmail').value;
+        const newPass = document.getElementById('resetUserNewPass').value;
+        if (!email || !newPass) { showAlert('Fill both fields', 'error'); return; }
+        const userList = getUsers();
+        const user = userList.find(u => u.email === email);
+        if (!user) { showAlert('User not found', 'error'); return; }
+        user.password = encodeBase64(newPass);
+        saveUsers(userList);
+        showAlert('Password reset', 'success');
+        document.getElementById('resetUserEmail').value = '';
+        document.getElementById('resetUserNewPass').value = '';
+    }
+    
+    function handleLogin() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const userList = getUsers();
+        const user = userList.find(u => u.email === email && decodeBase64(u.password) === password);
+        
+        if (user) {
+            setSession(user);
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            document.getElementById('userName').textContent = user.fullName;
+            document.getElementById('userRole').textContent = 'Role: ' + user.role;
+            
+            const dashboardMenu = document.querySelector('[data-page="dashboard"]');
+            const userManagementMenu = document.querySelector('[data-page="users"]');
+            const dbAdminMenu = document.querySelector('[data-page="database"]');
+            if (dashboardMenu) dashboardMenu.style.display = (user.role === 'admin' || user.role === 'dbadmin') ? 'block' : 'none';
+            if (userManagementMenu) userManagementMenu.style.display = user.role === 'admin' ? 'block' : 'none';
+            if (dbAdminMenu) dbAdminMenu.style.display = (user.role === 'admin' || user.role === 'dbadmin') ? 'block' : 'none';
+            
+            setupMenuNavigation();
+            refreshAllSections();
+            document.querySelector('.menu-item').click();
+            showAlert(`Welcome ${user.fullName}!`, 'success');
+        } else {
+            showAlert('Invalid credentials', 'error');
+        }
+    }
+    
+    function handleRegister() {
+        const fullName = document.getElementById('regFullName').value;
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
+        const confirm = document.getElementById('regConfirmPassword').value;
+        
+        if (!fullName || !email || !password) { showAlert('Fill all fields', 'error'); return; }
+        if (password !== confirm) { showAlert('Passwords mismatch', 'error'); return; }
+        
+        const userList = getUsers();
+        if (userList.find(u => u.email === email)) { showAlert('Email exists', 'error'); return; }
+        
+        const role = 'general';
+        userList.push({ fullName, email, password: encodeBase64(password), role });
+        saveUsers(userList);
+        
+        showAlert('Account created! Please login.', 'success');
+        showLogin();
+        
+        document.getElementById('regFullName').value = '';
+        document.getElementById('regEmail').value = '';
+        document.getElementById('regPassword').value = '';
+        document.getElementById('regConfirmPassword').value = '';
+    }
+    
+    function showRegister() {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('registerForm').style.display = 'block';
+    }
+    
+    function showLogin() {
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('registerForm').style.display = 'none';
+    }
+    
+    function setupMenuNavigation() {
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.onclick = () => {
+                const pageId = item.getAttribute('data-page');
+                if (pageId === 'dashboard' && currentUser?.role !== 'admin' && currentUser?.role !== 'dbadmin') { 
+                    showAlert('Admin or DB Admin access required', 'error'); 
+                    return; 
+                }
+                if (pageId === 'users' && currentUser?.role !== 'admin') { 
+                    showAlert('Admin only', 'error'); 
+                    return; 
+                }
+                
+                document.querySelectorAll('.page').forEach(page => page.classList.remove('active-page'));
+                document.getElementById(pageId).classList.add('active-page');
+                document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+                item.classList.add('active');
+                
+                if (pageId === 'dashboard') setTimeout(() => initDashboardMap(), 100);
+                if (pageId === 'groups') { 
+                    updateAvailableEmployeesList();
+                    loadGroupsList(); 
+                }
+                if (pageId === 'tasks') displayTasksCards();
+                if (pageId === 'completeTasks') displayCompletedTasks();
+                if (pageId === 'employees') displayEmployeeDirectory();
+                if (pageId === 'users') displayUsersTable();
+            };
+        });
+    }
+    
+    function handleLogout() {
+        clearSession();
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('authContainer').style.display = 'flex';
+        document.getElementById('loginEmail').value = '';
+        document.getElementById('loginPassword').value = '';
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        loadUsersFromLocal();
+        
+        document.getElementById('employeeSearch')?.addEventListener('input', () => displayEmployeeDirectory());
+        document.getElementById('taskSearch')?.addEventListener('input', () => displayTasksCards());
+        document.getElementById('completedSearch')?.addEventListener('input', () => displayCompletedTasks());
+        document.getElementById('availableEmployeesSearch')?.addEventListener('input', () => updateAvailableEmployeesList());
+        document.getElementById('groupsSearch')?.addEventListener('input', () => loadGroupsList());
+        document.getElementById('locationType')?.addEventListener('change', () => {
+            const isPoint = document.getElementById('locationType').value === 'point';
+            document.getElementById('pointLocation').style.display = isPoint ? 'block' : 'none';
+            document.getElementById('rangeLocation').style.display = isPoint ? 'none' : 'block';
+        });
+        document.getElementById('taskType')?.addEventListener('change', () => {
+            const isEmployee = document.getElementById('taskType').value === 'employee';
+            document.getElementById('employeeSelectGroup').style.display = isEmployee ? 'block' : 'none';
+            document.getElementById('groupSelectGroup').style.display = isEmployee ? 'none' : 'block';
+        });
+        
+        const session = getCurrentSession();
+        if (session) {
+            currentUser = session;
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            document.getElementById('userName').textContent = session.fullName;
+            document.getElementById('userRole').textContent = 'Role: ' + session.role;
+            
+            const dashboardMenu = document.querySelector('[data-page="dashboard"]');
+            const userManagementMenu = document.querySelector('[data-page="users"]');
+            const dbAdminMenu = document.querySelector('[data-page="database"]');
+            if (dashboardMenu) dashboardMenu.style.display = (session.role === 'admin' || session.role === 'dbadmin') ? 'block' : 'none';
+            if (userManagementMenu) userManagementMenu.style.display = session.role === 'admin' ? 'block' : 'none';
+            if (dbAdminMenu) dbAdminMenu.style.display = (session.role === 'admin' || session.role === 'dbadmin') ? 'block' : 'none';
+            
+            setupMenuNavigation();
+            refreshAllSections();
+            document.querySelector('.menu-item').click();
+        }
+    });
+    
+    initDatabase();
+</script>
+</body>
+</html>
